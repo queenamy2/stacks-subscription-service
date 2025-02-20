@@ -1,27 +1,27 @@
 ;; Subscription Service Smart Contract
 
 ;; Error codes
-(define-constant ERR-NOT-CONTRACT-OWNER (err u100))
-(define-constant ERR-USER-ALREADY-SUBSCRIBED (err u101))
-(define-constant ERR-USER-NOT-SUBSCRIBED (err u102))
-(define-constant ERR-USER-BALANCE-TOO-LOW (err u103))
-(define-constant ERR-SUBSCRIPTION-PLAN-NOT-FOUND (err u104))
-(define-constant ERR-SUBSCRIPTION-TERM-ENDED (err u105))
-(define-constant ERR-REFUND-NOT-ALLOWED (err u106))
-(define-constant ERR-ATTEMPTING-SAME-PLAN-UPGRADE (err u107))
-(define-constant ERR-REFUND-WINDOW-EXPIRED (err u108))
-(define-constant ERR-INVALID-PLAN-TIER-CHANGE (err u109))
-(define-constant ERR-INVALID-PARAMETER-VALUE (err u110))
+(define-constant ERR_NOT_CONTRACT_OWNER (err u100))
+(define-constant ERR_USER_ALREADY_SUBSCRIBED (err u101))
+(define-constant ERR_USER_NOT_SUBSCRIBED (err u102))
+(define-constant ERR_USER_BALANCE_TOO_LOW (err u103))
+(define-constant ERR_SUBSCRIPTION_PLAN_NOT_FOUND (err u104))
+(define-constant ERR_SUBSCRIPTION_TERM_ENDED (err u105))
+(define-constant ERR_REFUND_NOT_ALLOWED (err u106))
+(define-constant ERR_ATTEMPTING_SAME_PLAN_UPGRADE (err u107))
+(define-constant ERR_REFUND_WINDOW_EXPIRED (err u108))
+(define-constant ERR_INVALID_PLAN_TIER_CHANGE (err u109))
+(define-constant ERR_INVALID_PARAMETER_VALUE (err u110))
 
 ;; Data vars
-(define-data-var contract-owner principal tx-sender)
-(define-data-var minimum-subscription-cost uint u100)
-(define-data-var standard-subscription-duration uint u2592000)
-(define-data-var maximum-refund-window uint u259200)  ;; 3 days in seconds
-(define-data-var subscription-change-penalty uint u1000000)     ;; 1 STX fee for changing plans
+(define-data-var CONTRACT_OWNER principal tx-sender)
+(define-data-var MINIMUM_SUBSCRIPTION_COST uint u100)
+(define-data-var STANDARD_SUBSCRIPTION_DURATION uint u2592000)
+(define-data-var MAXIMUM_REFUND_WINDOW uint u259200)  ;; 3 days in seconds
+(define-data-var SUBSCRIPTION_CHANGE_PENALTY uint u1000000)     ;; 1 STX fee for changing plans
 
 ;; Data maps
-(define-map SubscriberProfile
+(define-map SUBSCRIBER_PROFILE
     principal
     {
         is-subscription-active: bool,
@@ -33,7 +33,7 @@
     }
 )
 
-(define-map SubscriptionTierConfiguration
+(define-map SUBSCRIPTION_TIER_CONFIGURATION
     (string-ascii 20)
     {
         tier-price: uint,
@@ -44,7 +44,7 @@
     }
 )
 
-(define-map UserRefundLog
+(define-map USER_REFUND_LOG
     { subscriber: principal, refund-timestamp: uint }
     {
         refunded-amount: uint,
@@ -54,16 +54,16 @@
 
 ;; Read-only functions
 (define-read-only (get-subscriber-details (subscriber-address principal))
-    (map-get? SubscriberProfile subscriber-address)
+    (map-get? SUBSCRIBER_PROFILE subscriber-address)
 )
 
 (define-read-only (get-subscription-tier-details (tier-name (string-ascii 20)))
-    (map-get? SubscriptionTierConfiguration tier-name)
+    (map-get? SUBSCRIPTION_TIER_CONFIGURATION tier-name)
 )
 
 (define-read-only (calculate-subscription-time-remaining (subscriber-address principal))
     (let (
-        (subscriber-info (unwrap! (map-get? SubscriberProfile subscriber-address) u0))
+        (subscriber-info (unwrap! (map-get? SUBSCRIBER_PROFILE subscriber-address) u0))
     )
     (if (get is-subscription-active subscriber-info)
         (- (get subscription-expiration-time subscriber-info) block-height)
@@ -73,12 +73,12 @@
 
 (define-read-only (calculate-eligible-refund-amount (subscriber-address principal))
     (let (
-        (subscriber-info (unwrap! (map-get? SubscriberProfile subscriber-address) u0))
+        (subscriber-info (unwrap! (map-get? SUBSCRIBER_PROFILE subscriber-address) u0))
         (elapsed-subscription-time (- block-height (get subscription-activation-time subscriber-info)))
         (total-subscription-duration (- (get subscription-expiration-time subscriber-info) (get subscription-activation-time subscriber-info)))
         (original-subscription-payment (get subscription-payment-amount subscriber-info))
     )
-    (if (> elapsed-subscription-time (var-get maximum-refund-window))
+    (if (> elapsed-subscription-time (var-get MAXIMUM_REFUND_WINDOW))
         u0
         (/ (* original-subscription-payment (- total-subscription-duration elapsed-subscription-time)) total-subscription-duration)
     ))
@@ -86,13 +86,13 @@
 
 ;; Private functions
 (define-private (verify-contract-owner)
-    (is-eq tx-sender (var-get contract-owner))
+    (is-eq tx-sender (var-get CONTRACT_OWNER))
 )
 
 (define-private (process-subscription-refund (subscriber principal) (refund-amount uint) (refund-reason (string-ascii 50)))
     (begin
-        (try! (stx-transfer? refund-amount (var-get contract-owner) subscriber))
-        (map-set UserRefundLog
+        (try! (stx-transfer? refund-amount (var-get CONTRACT_OWNER) subscriber))
+        (map-set USER_REFUND_LOG
             { subscriber: subscriber, refund-timestamp: block-height }
             {
                 refunded-amount: refund-amount,
@@ -118,13 +118,13 @@
     (tier-level uint)
     (allows-refunds bool))
     (begin
-        (asserts! (verify-contract-owner) ERR-NOT-CONTRACT-OWNER)
-        (asserts! (> tier-cost u0) ERR-INVALID-PARAMETER-VALUE)
-        (asserts! (> tier-duration u0) ERR-INVALID-PARAMETER-VALUE)
-        (asserts! (> tier-level u0) ERR-INVALID-PARAMETER-VALUE)
-        (asserts! (validate-feature-list tier-features) ERR-INVALID-PARAMETER-VALUE)
-        (asserts! (not (is-eq tier-name "")) ERR-INVALID-PARAMETER-VALUE)
-        (ok (map-set SubscriptionTierConfiguration
+        (asserts! (verify-contract-owner) ERR_NOT_CONTRACT_OWNER)
+        (asserts! (> tier-cost u0) ERR_INVALID_PARAMETER_VALUE)
+        (asserts! (> tier-duration u0) ERR_INVALID_PARAMETER_VALUE)
+        (asserts! (> tier-level u0) ERR_INVALID_PARAMETER_VALUE)
+        (asserts! (validate-feature-list tier-features) ERR_INVALID_PARAMETER_VALUE)
+        (asserts! (not (is-eq tier-name "")) ERR_INVALID_PARAMETER_VALUE)
+        (ok (map-set SUBSCRIPTION_TIER_CONFIGURATION
             tier-name
             {
                 tier-price: tier-cost,
@@ -140,17 +140,17 @@
 ;; Public functions for tier management
 (define-public (purchase-subscription-tier (selected-tier-name (string-ascii 20)))
     (let (
-        (tier-info (unwrap! (map-get? SubscriptionTierConfiguration selected-tier-name) ERR-SUBSCRIPTION-PLAN-NOT-FOUND))
+        (tier-info (unwrap! (map-get? SUBSCRIPTION_TIER_CONFIGURATION selected-tier-name) ERR_SUBSCRIPTION_PLAN_NOT_FOUND))
         (current-time block-height)
         (tier-cost (get tier-price tier-info))
         (existing-subscription (get-subscriber-details tx-sender))
     )
-    (asserts! (is-none existing-subscription) ERR-USER-ALREADY-SUBSCRIBED)
-    (asserts! (not (is-eq selected-tier-name "")) ERR-INVALID-PARAMETER-VALUE)
-    (asserts! (> tier-cost u0) ERR-INVALID-PARAMETER-VALUE)
-    (try! (stx-transfer? tier-cost tx-sender (var-get contract-owner)))
+    (asserts! (is-none existing-subscription) ERR_USER_ALREADY_SUBSCRIBED)
+    (asserts! (not (is-eq selected-tier-name "")) ERR_INVALID_PARAMETER_VALUE)
+    (asserts! (> tier-cost u0) ERR_INVALID_PARAMETER_VALUE)
+    (try! (stx-transfer? tier-cost tx-sender (var-get CONTRACT_OWNER)))
     
-    (ok (map-set SubscriberProfile
+    (ok (map-set SUBSCRIBER_PROFILE
         tx-sender
         {
             is-subscription-active: true,
@@ -165,18 +165,18 @@
 
 (define-public (request-subscription-refund (refund-reason (string-ascii 50)))
     (let (
-        (subscriber-info (unwrap! (map-get? SubscriberProfile tx-sender) ERR-USER-NOT-SUBSCRIBED))
-        (tier-info (unwrap! (map-get? SubscriptionTierConfiguration (get active-subscription-tier subscriber-info)) ERR-SUBSCRIPTION-PLAN-NOT-FOUND))
+        (subscriber-info (unwrap! (map-get? SUBSCRIBER_PROFILE tx-sender) ERR_USER_NOT_SUBSCRIBED))
+        (tier-info (unwrap! (map-get? SUBSCRIPTION_TIER_CONFIGURATION (get active-subscription-tier subscriber-info)) ERR_SUBSCRIPTION_PLAN_NOT_FOUND))
         (calculated-refund-amount (calculate-eligible-refund-amount tx-sender))
     )
-    (asserts! (get is-subscription-active subscriber-info) ERR-USER-NOT-SUBSCRIBED)
-    (asserts! (get tier-refund-eligibility tier-info) ERR-REFUND-NOT-ALLOWED)
-    (asserts! (> calculated-refund-amount u0) ERR-REFUND-NOT-ALLOWED)
-    (asserts! (not (is-eq refund-reason "")) ERR-INVALID-PARAMETER-VALUE)
+    (asserts! (get is-subscription-active subscriber-info) ERR_USER_NOT_SUBSCRIBED)
+    (asserts! (get tier-refund-eligibility tier-info) ERR_REFUND_NOT_ALLOWED)
+    (asserts! (> calculated-refund-amount u0) ERR_REFUND_NOT_ALLOWED)
+    (asserts! (not (is-eq refund-reason "")) ERR_INVALID_PARAMETER_VALUE)
     
     (try! (process-subscription-refund tx-sender calculated-refund-amount refund-reason))
     
-    (ok (map-set SubscriberProfile
+    (ok (map-set SUBSCRIBER_PROFILE
         tx-sender
         {
             is-subscription-active: false,
@@ -192,22 +192,22 @@
 (define-public (upgrade-subscription-tier (new-tier-name (string-ascii 20)))
     (begin
         (let (
-            (current-subscription (unwrap! (map-get? SubscriberProfile tx-sender) ERR-USER-NOT-SUBSCRIBED))
-            (current-tier (unwrap! (map-get? SubscriptionTierConfiguration (get active-subscription-tier current-subscription)) ERR-SUBSCRIPTION-PLAN-NOT-FOUND))
-            (new-tier (unwrap! (map-get? SubscriptionTierConfiguration new-tier-name) ERR-SUBSCRIPTION-PLAN-NOT-FOUND))
+            (current-subscription (unwrap! (map-get? SUBSCRIBER_PROFILE tx-sender) ERR_USER_NOT_SUBSCRIBED))
+            (current-tier (unwrap! (map-get? SUBSCRIPTION_TIER_CONFIGURATION (get active-subscription-tier current-subscription)) ERR_SUBSCRIPTION_PLAN_NOT_FOUND))
+            (new-tier (unwrap! (map-get? SUBSCRIPTION_TIER_CONFIGURATION new-tier-name) ERR_SUBSCRIPTION_PLAN_NOT_FOUND))
             (remaining-time (calculate-subscription-time-remaining tx-sender))
             (remaining-value (* (get subscription-payment-amount current-subscription) (/ remaining-time (get tier-duration-blocks current-tier))))
         )
-        (asserts! (get is-subscription-active current-subscription) ERR-USER-NOT-SUBSCRIBED)
-        (asserts! (> (get tier-level new-tier) (get tier-level current-tier)) ERR-INVALID-PLAN-TIER-CHANGE)
-        (asserts! (not (is-eq new-tier-name (get active-subscription-tier current-subscription))) ERR-ATTEMPTING-SAME-PLAN-UPGRADE)
+        (asserts! (get is-subscription-active current-subscription) ERR_USER_NOT_SUBSCRIBED)
+        (asserts! (> (get tier-level new-tier) (get tier-level current-tier)) ERR_INVALID_PLAN_TIER_CHANGE)
+        (asserts! (not (is-eq new-tier-name (get active-subscription-tier current-subscription))) ERR_ATTEMPTING_SAME_PLAN_UPGRADE)
         
         (let (
             (upgrade-cost (- (get tier-price new-tier) remaining-value))
         )
-        (try! (stx-transfer? (+ upgrade-cost (var-get subscription-change-penalty)) tx-sender (var-get contract-owner)))
+        (try! (stx-transfer? (+ upgrade-cost (var-get SUBSCRIPTION_CHANGE_PENALTY)) tx-sender (var-get CONTRACT_OWNER)))
         
-        (ok (map-set SubscriberProfile
+        (ok (map-set SUBSCRIBER_PROFILE
             tx-sender
             {
                 is-subscription-active: true,
@@ -224,21 +224,21 @@
 (define-public (downgrade-subscription-tier (new-tier-name (string-ascii 20)))
     (begin
         (let (
-            (current-subscription (unwrap! (map-get? SubscriberProfile tx-sender) ERR-USER-NOT-SUBSCRIBED))
-            (current-tier (unwrap! (map-get? SubscriptionTierConfiguration (get active-subscription-tier current-subscription)) ERR-SUBSCRIPTION-PLAN-NOT-FOUND))
-            (new-tier (unwrap! (map-get? SubscriptionTierConfiguration new-tier-name) ERR-SUBSCRIPTION-PLAN-NOT-FOUND))
+            (current-subscription (unwrap! (map-get? SUBSCRIBER_PROFILE tx-sender) ERR_USER_NOT_SUBSCRIBED))
+            (current-tier (unwrap! (map-get? SUBSCRIPTION_TIER_CONFIGURATION (get active-subscription-tier current-subscription)) ERR_SUBSCRIPTION_PLAN_NOT_FOUND))
+            (new-tier (unwrap! (map-get? SUBSCRIPTION_TIER_CONFIGURATION new-tier-name) ERR_SUBSCRIPTION_PLAN_NOT_FOUND))
             (remaining-time (calculate-subscription-time-remaining tx-sender))
         )
-        (asserts! (get is-subscription-active current-subscription) ERR-USER-NOT-SUBSCRIBED)
-        (asserts! (< (get tier-level new-tier) (get tier-level current-tier)) ERR-INVALID-PLAN-TIER-CHANGE)
+        (asserts! (get is-subscription-active current-subscription) ERR_USER_NOT_SUBSCRIBED)
+        (asserts! (< (get tier-level new-tier) (get tier-level current-tier)) ERR_INVALID_PLAN_TIER_CHANGE)
         
         (let (
             (remaining-value (* (get subscription-payment-amount current-subscription) (/ remaining-time (get tier-duration-blocks current-tier))))
             (credit-amount (- remaining-value (get tier-price new-tier)))
         )
-        (try! (stx-transfer? (var-get subscription-change-penalty) tx-sender (var-get contract-owner)))
+        (try! (stx-transfer? (var-get SUBSCRIPTION_CHANGE_PENALTY) tx-sender (var-get CONTRACT_OWNER)))
         
-        (ok (map-set SubscriberProfile
+        (ok (map-set SUBSCRIBER_PROFILE
             tx-sender
             {
                 is-subscription-active: true,
@@ -255,17 +255,17 @@
 ;; Admin functions
 (define-public (update-refund-window (new-window-duration uint))
     (begin
-        (asserts! (verify-contract-owner) ERR-NOT-CONTRACT-OWNER)
-        (asserts! (> new-window-duration u0) ERR-INVALID-PARAMETER-VALUE)
-        (ok (var-set maximum-refund-window new-window-duration))
+        (asserts! (verify-contract-owner) ERR_NOT_CONTRACT_OWNER)
+        (asserts! (> new-window-duration u0) ERR_INVALID_PARAMETER_VALUE)
+        (ok (var-set MAXIMUM_REFUND_WINDOW new-window-duration))
     )
 )
 
 (define-public (update-tier-change-fee (new-fee-amount uint))
     (begin
-        (asserts! (verify-contract-owner) ERR-NOT-CONTRACT-OWNER)
-        (asserts! (>= new-fee-amount u0) ERR-INVALID-PARAMETER-VALUE)
-        (ok (var-set subscription-change-penalty new-fee-amount))
+        (asserts! (verify-contract-owner) ERR_NOT_CONTRACT_OWNER)
+        (asserts! (>= new-fee-amount u0) ERR_INVALID_PARAMETER_VALUE)
+        (ok (var-set SUBSCRIPTION_CHANGE_PENALTY new-fee-amount))
     )
 )
 

@@ -18,31 +18,31 @@ This smart contract implements a flexible subscription system allowing users to 
 
 | Code | Constant | Description |
 |------|----------|-------------|
-| u100 | ERR-NOT-CONTRACT-OWNER | Operation restricted to contract owner |
-| u101 | ERR-USER-ALREADY-SUBSCRIBED | User already has an active subscription |
-| u102 | ERR-USER-NOT-SUBSCRIBED | Operation requires an active subscription |
-| u103 | ERR-USER-BALANCE-TOO-LOW | Insufficient funds for the operation |
-| u104 | ERR-SUBSCRIPTION-PLAN-NOT-FOUND | Referenced subscription tier doesn't exist |
-| u105 | ERR-SUBSCRIPTION-TERM-ENDED | Subscription is no longer active |
-| u106 | ERR-REFUND-NOT-ALLOWED | Refund is not allowed for this tier or condition |
-| u107 | ERR-ATTEMPTING-SAME-PLAN-UPGRADE | Cannot upgrade to the same plan |
-| u108 | ERR-REFUND-WINDOW-EXPIRED | Refund period has expired |
-| u109 | ERR-INVALID-PLAN-TIER-CHANGE | Invalid tier change direction (upgrade/downgrade) |
-| u110 | ERR-INVALID-PARAMETER-VALUE | Invalid parameter provided to function |
+| u100 | ERR_NOT_CONTRACT_OWNER | Operation restricted to contract owner |
+| u101 | ERR_USER_ALREADY_SUBSCRIBED | User already has an active subscription |
+| u102 | ERR_USER_NOT_SUBSCRIBED | Operation requires an active subscription |
+| u103 | ERR_USER_BALANCE_TOO_LOW | Insufficient funds for the operation |
+| u104 | ERR_SUBSCRIPTION_PLAN_NOT_FOUND | Referenced subscription tier doesn't exist |
+| u105 | ERR_SUBSCRIPTION_TERM_ENDED | Subscription is no longer active |
+| u106 | ERR_REFUND_NOT_ALLOWED | Refund is not allowed for this tier or condition |
+| u107 | ERR_ATTEMPTING_SAME_PLAN_UPGRADE | Cannot upgrade to the same plan |
+| u108 | ERR_REFUND_WINDOW_EXPIRED | Refund period has expired |
+| u109 | ERR_INVALID_PLAN_TIER_CHANGE | Invalid tier change direction (upgrade/downgrade) |
+| u110 | ERR_INVALID_PARAMETER_VALUE | Invalid parameter provided to function |
 
 ## Contract Data
 
 ### Data Variables
 
-- `contract-owner`: Principal address of the contract administrator
-- `minimum-subscription-cost`: Minimum allowed cost for any subscription tier
-- `standard-subscription-duration`: Default duration for subscription tiers
-- `maximum-refund-window`: Time window during which refunds are permitted (in seconds)
-- `subscription-change-penalty`: Fee charged when changing subscription plans
+- `CONTRACT_OWNER`: Principal address of the contract administrator
+- `MINIMUM_SUBSCRIPTION_COST`: Minimum allowed cost for any subscription tier
+- `STANDARD_SUBSCRIPTION_DURATION`: Default duration for subscription tiers
+- `MAXIMUM_REFUND_WINDOW`: Time window during which refunds are permitted (in seconds)
+- `SUBSCRIPTION_CHANGE_PENALTY`: Fee charged when changing subscription plans
 
 ### Data Maps
 
-1. **SubscriberProfile**: Stores subscriber information
+1. **SUBSCRIBER_PROFILE**: Stores subscriber information
    - Key: User principal
    - Values:
      - `is-subscription-active`: Boolean indicating active status
@@ -52,7 +52,7 @@ This smart contract implements a flexible subscription system allowing users to 
      - `subscription-payment-amount`: Amount paid for current subscription
      - `subscription-credit-balance`: Unused credit from plan changes
 
-2. **SubscriptionTierConfiguration**: Stores tier configurations
+2. **SUBSCRIPTION_TIER_CONFIGURATION**: Stores tier configurations
    - Key: Tier name (string-ascii 20)
    - Values:
      - `tier-price`: Cost in STX microunits
@@ -61,7 +61,7 @@ This smart contract implements a flexible subscription system allowing users to 
      - `tier-level`: Numerical tier level (higher = better tier)
      - `tier-refund-eligibility`: Whether tier permits refunds
 
-3. **UserRefundLog**: Tracks refund history
+3. **USER_REFUND_LOG**: Tracks refund history
    - Key: Composite of subscriber principal and refund timestamp
    - Values:
      - `refunded-amount`: Amount refunded
